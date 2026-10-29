@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Bazoš Smart Search (Auta & Motorky)",
+  "name": "Bazoš Smart Search",
   "version": "0.6.0",
   "description": "Chytré filtrování aut a motorek na Bazoš.cz podle modelu, výkonu, roku výroby, nájezdu, objemu a klíčových slov.",
   "content_scripts": [

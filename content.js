@@ -7,7 +7,8 @@ const AUTOFETCH_KEY = IS_MOTO ? "bss_moto_autofetch" : "bss_car_autofetch";
 
 const APP_VERSION = "0.6";
 const MIN_YEAR = 1970;
-const MAX_YEAR = new Date().getFullYear() + 1;
+const SLIDER_MIN_YEAR = 1999;
+const MAX_YEAR = new Date().getFullYear();
 const REQUEST_DELAY_MS = 800; // pauza mezi načítáním stránek, aby to nepůsobilo jako scraping
 const AUTO_FETCH_THRESHOLD = 6; // při automatickém dotahování chceme alespoň tolik vyhovujících
 const MAX_PAGES_PER_SCAN = 12;
@@ -79,6 +80,32 @@ function isPlausibleYear(y) {
     return Number.isInteger(y) && y >= MIN_YEAR && y <= MAX_YEAR;
 }
 
+// Převod pozice posuvníku (0–1000) na cenu v Kč:
+// 0–500 (50 % délky) = 0 až 350 000 Kč (krok 5 000 Kč)
+// 500–1000 (druhých 50 % délky) = 350 000 až 1 000 000 Kč (krok 10 000 Kč)
+function sliderToPrice(pos) {
+    const val = Number(pos);
+    if (val <= 500) {
+        const raw = (val / 500) * 350000;
+        return Math.round(raw / 5000) * 5000;
+    }
+    const raw = 350000 + ((val - 500) / 500) * 650000;
+    return Math.round(raw / 10000) * 10000;
+}
+
+// Opačný převod ceny v Kč na pozici posuvníku (0–1000)
+function priceToSlider(price) {
+    const p = Math.max(0, Math.min(MAX_PRICE, Number(price) || 0));
+    if (p <= 350000) {
+        return Math.round((p / 350000) * 500);
+    }
+    return Math.round(500 + ((p - 350000) / 650000) * 500);
+}
+
+function formatPriceLabel(price) {
+    return `${price.toLocaleString("cs-CZ")} Kč`;
+}
+
 function hasActiveClientFilters(filters) {
     return Boolean(
         filters.fuel ||
@@ -122,7 +149,7 @@ function initSmartSearch() {
     const panel = document.createElement("div");
     panel.id = "bss-panel";
 
-    // Dynamické pole: U aut Palivo, u motorek Objem (ccm) + A2
+// Dynamické pole: U aut Palivo, u motorek Objem (ccm)
     const specificFieldHtml = IS_MOTO
         ? `
       <div class="bss-field">
@@ -138,8 +165,8 @@ function initSmartSearch() {
         <label for="bss-fuel">Palivo</label>
         <select id="bss-fuel">
           <option value="">Jakékoliv</option>
-          <option value="diesel">Nafta (TDI, SDI, HDi, dCi...)</option>
-          <option value="petrol">Benzín (TSI, MPI, HTP, 16V...)</option>
+          <option value="diesel">Nafta</option>
+          <option value="petrol">Benzín</option>
           <option value="lpg">LPG / CNG</option>
           <option value="hybrid">Hybrid / Elektro</option>
         </select>
@@ -149,7 +176,7 @@ function initSmartSearch() {
     panel.innerHTML = `
     <div class="bss-header">
       <div class="bss-title">
-        <span>${IS_MOTO ? "🏍️ Bazoš Smart Search – Motorky" : "🚗 Bazoš Smart Search – Auta"}</span>
+        <span>${IS_MOTO ? "🏍️" : "🚗"} Bazoš Smart Search</span>
         <span class="bss-badge">v${APP_VERSION}</span>
       </div>
       <span id="bss-status" style="font-size: 12px; font-weight: 600; color: #ff6600;">Připraveno k filtrování</span>
@@ -181,23 +208,44 @@ function initSmartSearch() {
       </div>
 
       <div class="bss-field">
-        <label>Rok výroby</label>
-        <div class="bss-range">
-          <input type="number" id="bss-year-min" placeholder="Od (např. 2012)" min="${MIN_YEAR}" max="${MAX_YEAR}">
-          <input type="number" id="bss-year-max" placeholder="Do" min="${MIN_YEAR}" max="${MAX_YEAR}">
+        <div class="bss-label-row">
+          <label>Rok výroby</label>
+          <span id="bss-year-label" class="bss-range-value">${SLIDER_MIN_YEAR} – ${MAX_YEAR}</span>
+        </div>
+        <div class="bss-dual-slider">
+          <div class="bss-slider-track">
+            <div id="bss-year-fill" class="bss-slider-fill"></div>
+          </div>
+          <input type="range" id="bss-year-min" min="${SLIDER_MIN_YEAR}" max="${MAX_YEAR}" value="${SLIDER_MIN_YEAR}" step="1">
+          <input type="range" id="bss-year-max" min="${SLIDER_MIN_YEAR}" max="${MAX_YEAR}" value="${MAX_YEAR}" step="1">
         </div>
       </div>
 
       <div class="bss-field">
         <label for="bss-km-max">Max. nájezd (km)</label>
-        <input type="number" id="bss-km-max" placeholder="např. 200000" min="0" step="10000">
+        <select id="bss-km-max">
+          <option value="">Jakýkoliv</option>
+          <option value="25000">Do 25 000 km</option>
+          <option value="50000">Do 50 000 km</option>
+          <option value="100000">Do 100 000 km</option>
+          <option value="150000">Do 150 000 km</option>
+          <option value="200000">Do 200 000 km</option>
+          <option value="250000">Do 250 000 km</option>
+          <option value="300000">Do 300 000 km</option>
+        </select>
       </div>
 
       <div class="bss-field">
-        <label>Cena (Kč)</label>
-        <div class="bss-range">
-          <input type="number" id="bss-price-min" placeholder="Od" min="0" step="10000">
-          <input type="number" id="bss-price-max" placeholder="Do" min="0" step="10000">
+        <div class="bss-label-row">
+          <label>Cena</label>
+          <span id="bss-price-label" class="bss-range-value">0 Kč – 1 000 000 Kč</span>
+        </div>
+        <div class="bss-dual-slider">
+          <div class="bss-slider-track">
+            <div id="bss-price-fill" class="bss-slider-fill"></div>
+          </div>
+          <input type="range" id="bss-price-min" min="0" max="1000" value="0" step="1">
+          <input type="range" id="bss-price-max" min="0" max="1000" value="1000" step="1">
         </div>
       </div>
 
@@ -234,6 +282,7 @@ function initSmartSearch() {
 
     createLoadMoreButton();
     setupDropdowns();
+    setupSliders();
     restoreSavedFilters();
     setupButtons();
     setupNativeToggles();
@@ -290,10 +339,98 @@ function populateModels(selectedBrand, selectedModel = "") {
     });
 }
 
+function setupSliders() {
+    const yearMinInput = document.getElementById("bss-year-min");
+    const yearMaxInput = document.getElementById("bss-year-max");
+    const priceMinInput = document.getElementById("bss-price-min");
+    const priceMaxInput = document.getElementById("bss-price-max");
+
+    yearMinInput.addEventListener("input", () => {
+        if (parseInt(yearMinInput.value, 10) > parseInt(yearMaxInput.value, 10)) {
+            yearMinInput.value = yearMaxInput.value;
+        }
+        updateSlidersUI();
+    });
+
+    yearMaxInput.addEventListener("input", () => {
+        if (parseInt(yearMaxInput.value, 10) < parseInt(yearMinInput.value, 10)) {
+            yearMaxInput.value = yearMinInput.value;
+        }
+        updateSlidersUI();
+    });
+
+    priceMinInput.addEventListener("input", () => {
+        if (parseInt(priceMinInput.value, 10) > parseInt(priceMaxInput.value, 10)) {
+            priceMinInput.value = priceMaxInput.value;
+        }
+        updateSlidersUI();
+    });
+
+    priceMaxInput.addEventListener("input", () => {
+        if (parseInt(priceMaxInput.value, 10) < parseInt(priceMinInput.value, 10)) {
+            priceMaxInput.value = priceMinInput.value;
+        }
+        updateSlidersUI();
+    });
+
+    updateSlidersUI();
+}
+
+function updateSlidersUI() {
+    // 1. Rok výroby
+    const yearMinEl = document.getElementById("bss-year-min");
+    const yearMaxEl = document.getElementById("bss-year-max");
+    const yearLabel = document.getElementById("bss-year-label");
+    const yearFill = document.getElementById("bss-year-fill");
+
+    if (yearMinEl && yearMaxEl) {
+        const yMin = parseInt(yearMinEl.value, 10);
+        const yMax = parseInt(yearMaxEl.value, 10);
+        const span = MAX_YEAR - SLIDER_MIN_YEAR;
+        const leftPct = ((yMin - SLIDER_MIN_YEAR) / span) * 100;
+        const rightPct = ((yMax - SLIDER_MIN_YEAR) / span) * 100;
+
+        yearFill.style.left = `${leftPct}%`;
+        yearFill.style.width = `${rightPct - leftPct}%`;
+        yearLabel.textContent = `${yMin} – ${yMax}`;
+        // Pokud jsou oba jezdce u pravého kraje, dáme levému vyšší z-index, aby šel chytit myší
+        yearMinEl.style.zIndex = yMin > MAX_YEAR - 2 ? "3" : "2";
+    }
+
+    // 2. Cena
+    const priceMinEl = document.getElementById("bss-price-min");
+    const priceMaxEl = document.getElementById("bss-price-max");
+    const priceLabel = document.getElementById("bss-price-label");
+    const priceFill = document.getElementById("bss-price-fill");
+
+    if (priceMinEl && priceMaxEl) {
+        const sMin = parseInt(priceMinEl.value, 10);
+        const sMax = parseInt(priceMaxEl.value, 10);
+        const pMin = sliderToPrice(sMin);
+        const pMax = sliderToPrice(sMax);
+
+        const leftPct = (sMin / 1000) * 100;
+        const rightPct = (sMax / 1000) * 100;
+
+        priceFill.style.left = `${leftPct}%`;
+        priceFill.style.width = `${rightPct - leftPct}%`;
+        priceLabel.textContent = `${formatPriceLabel(pMin)} – ${formatPriceLabel(pMax)}`;
+        priceMinEl.style.zIndex = sMin > 950 ? "3" : "2";
+    }
+}
+
 function getFormFilters() {
     const fuelEl = document.getElementById("bss-fuel");
     const ccmMinEl = document.getElementById("bss-ccm-min");
     const ccmMaxEl = document.getElementById("bss-ccm-max");
+
+    const rawYearMin = parseInt(document.getElementById("bss-year-min").value, 10);
+    const rawYearMax = parseInt(document.getElementById("bss-year-max").value, 10);
+    // Pokud je posuvník roku v plném výchozím rozsahu (1999–2026), nefiltrujeme rok
+    const isYearFiltered = rawYearMin > SLIDER_MIN_YEAR || rawYearMax < MAX_YEAR;
+
+    const rawPriceMin = sliderToPrice(document.getElementById("bss-price-min").value);
+    const rawPriceMax = sliderToPrice(document.getElementById("bss-price-max").value);
 
     return {
         brand: document.getElementById("bss-brand").value,
@@ -303,11 +440,11 @@ function getFormFilters() {
         ccmMax: ccmMaxEl ? parseInt(ccmMaxEl.value, 10) || null : null,
         powerMin: parseInt(document.getElementById("bss-power-min").value, 10) || null,
         powerMax: parseInt(document.getElementById("bss-power-max").value, 10) || null,
-        yearMin: parseInt(document.getElementById("bss-year-min").value, 10) || null,
-        yearMax: parseInt(document.getElementById("bss-year-max").value, 10) || null,
+        yearMin: isYearFiltered ? rawYearMin : null,
+        yearMax: isYearFiltered ? rawYearMax : null,
         kmMax: parseInt(document.getElementById("bss-km-max").value, 10) || null,
-        priceMin: document.getElementById("bss-price-min").value.trim(),
-        priceMax: document.getElementById("bss-price-max").value.trim(),
+        priceMin: rawPriceMin > 0 ? String(rawPriceMin) : "",
+        priceMax: rawPriceMax < MAX_PRICE ? String(rawPriceMax) : "",
         keywordsIn: document.getElementById("bss-keywords-in").value,
         keywordsOut: document.getElementById("bss-keywords-out").value,
         hideParts: document.getElementById("bss-hide-parts").checked,
@@ -334,15 +471,25 @@ function restoreSavedFilters() {
 
         document.getElementById("bss-power-min").value = filters.powerMin || "";
         document.getElementById("bss-power-max").value = filters.powerMax || "";
-        document.getElementById("bss-year-min").value = filters.yearMin || "";
-        document.getElementById("bss-year-max").value = filters.yearMax || "";
+
+        const yMin = filters.yearMin ? Math.max(SLIDER_MIN_YEAR, Math.min(MAX_YEAR, filters.yearMin)) : SLIDER_MIN_YEAR;
+        const yMax = filters.yearMax ? Math.max(SLIDER_MIN_YEAR, Math.min(MAX_YEAR, filters.yearMax)) : MAX_YEAR;
+        document.getElementById("bss-year-min").value = yMin;
+        document.getElementById("bss-year-max").value = yMax;
+
         document.getElementById("bss-km-max").value = filters.kmMax || "";
-        document.getElementById("bss-price-min").value = filters.priceMin || "";
-        document.getElementById("bss-price-max").value = filters.priceMax || "";
+
+        const pMin = filters.priceMin ? priceToSlider(filters.priceMin) : 0;
+        const pMax = filters.priceMax ? priceToSlider(filters.priceMax) : 1000;
+        document.getElementById("bss-price-min").value = pMin;
+        document.getElementById("bss-price-max").value = pMax;
+
         document.getElementById("bss-keywords-in").value = filters.keywordsIn || "";
         document.getElementById("bss-keywords-out").value = filters.keywordsOut || "";
         document.getElementById("bss-hide-parts").checked = filters.hideParts !== false;
         document.getElementById("bss-include-unknown").checked = Boolean(filters.includeUnknown);
+
+        updateSlidersUI();
     } catch (e) {
         console.error("Chyba při načítání uložených filtrů:", e);
     }
@@ -435,17 +582,30 @@ function analyzeAdText(text, titleText = "") {
         }
     }
 
-    // 3. Rok výroby
-    // a) z textu inzerátu, jen s jasným označením (r.v., rok, roku, vyrobeno, MM/RRRR...)
-    const explicitYearMatch = cleanText.match(
-        /(?:\br\.?\s*v\.?|\brok(?:u|\s+v[ýy]roby)?|vyrobeno|do\s+provozu|\b(?:0?[1-9]|1[0-2])\s*\/)\s*:?\s*(\d{4})(?!\d)/iu
+// 3. Rok výroby
+    // Vymažeme zmínky o STK / technické (např. "STK 09/2027", "STK do 2028", "technická do 5/2026"), aby nepletly rok výroby
+    const stripStk = (str) =>
+        str.replace(/\b(?:stk|technick[áa]|emise)\b[^.,;\n]{0,20}?\b(?:\d{1,2}\s*[\/.]\s*)?(?:19|20)\d{2}\b/giu, " ");
+    const yearText = stripStk(cleanText);
+    const yearTitle = stripStk(cleanTitle);
+
+    // a) Nejvyšší priorita: jasné slovní označení (r.v., rok výroby, vyrobeno, do provozu)
+    const explicitYearMatch = yearText.match(
+        /(?:\br\.?\s*v\.?|\brok(?:\s+v[ýy]roby)?|vyrobeno|do\s+provozu)\s*:?\s*(\d{4})(?!\d)/iu
     );
     if (explicitYearMatch && isPlausibleYear(parseInt(explicitYearMatch[1], 10))) {
         year = parseInt(explicitYearMatch[1], 10);
     }
-    // b) jinak holý rok v nadpisu, např. "CFMOTO 700MT Adventure, DPH, 2025, 8250 km"
+    // b) Formát MM/RRRR (už očištěný od STK)
     if (year === null) {
-        for (const m of cleanTitle.matchAll(/(?<!\d)(\d{4})(?!\d)/g)) {
+        const monthYearMatch = yearText.match(/\b(?:0?[1-9]|1[0-2])\s*\/\s*(\d{4})(?!\d)/u);
+        if (monthYearMatch && isPlausibleYear(parseInt(monthYearMatch[1], 10))) {
+            year = parseInt(monthYearMatch[1], 10);
+        }
+    }
+    // c) Holý rok v nadpisu (očištěný od STK), např. "Toyota Avensis 1.8 VVT-i, 2003"
+    if (year === null) {
+        for (const m of yearTitle.matchAll(/(?<!\d)(\d{4})(?!\d)/g)) {
             if (isPlausibleYear(parseInt(m[1], 10))) {
                 year = parseInt(m[1], 10);
                 break;
@@ -454,14 +614,16 @@ function analyzeAdText(text, titleText = "") {
     }
 
     // 4. Nájezd v km
-    // Datumy typu "02/2013" nebo "06.2023" nesmí být brané za km (dřív se "2013 Km" zaměnilo za nájezd)
     const kmText = cleanText.replace(/(?<!\d)\d{1,2}\s*[\/.]\s*(?:19|20)\d{2}(?!\d)/g, " ");
     const tisKmMatch = kmText.match(/(?<!\d)(\d{1,3})\s*(?:tis\.?|t)\s*(?:km(?!\/|h(?!\p{L}))|kilometr\p{L}*)/iu);
-    const fullKmMatch = kmText.match(/(?<!\d)(\d{1,3})[\s.,]+(\d{3}|xxx)\s*(?:km(?!\/|h(?!\p{L}))|kilometr\p{L}*)/iu);
+    const fullKmMatch = kmText.match(/(?<!\d)(\d{1,3})[\s.,]*(\d{3}|xxx)\s*(?:km(?!\/|h(?!\p{L}))|kilometr\p{L}*)/iu);
+    const xxxOnlyMatch = kmText.match(/(?<!\d)(\d{2,3})\s*xxx\b/iu);
     const simpleKmMatch = kmText.match(/(?<!\d)(\d{4,6})\s*(?:km(?!\/|h(?!\p{L}))|kilometr\p{L}*)/iu);
-    // "stav kilometrů 4620", "najeto 8250 kilometrů" – číslo bez jednotky přímo za sebou
+    // "stav kilometrů 4620", "Nájezd 396xxx", "najeto 180 tis" – číslo (nebo xxx/tis) za klíčovým slovem i bez "km"
     const textKmMatches = [
-        ...kmText.matchAll(/(?:stav|najet[oa]|n[áa]jezd\p{L}*|(?<!\p{L})km)\s*:?\s*[^\d]{0,25}?(\d{1,3}(?:[\s.]\d{3})+|\d{4,6})(?!\d)/giu),
+        ...kmText.matchAll(
+            /(?:stav\s+tachometru|stav\s+km|najet[oa]|n[áa]jezd\p{L}*)\s*:?\s*(\d{1,3}(?:[\s.,]*(?:\d{3}|xxx))+|\d{1,3}\s*tis\.?|\d{4,6})(?![\d])/giu
+        ),
     ];
 
     if (tisKmMatch) {
@@ -470,13 +632,21 @@ function analyzeAdText(text, titleText = "") {
         const thousands = parseInt(fullKmMatch[1], 10);
         const hundreds = fullKmMatch[2].toLowerCase() === "xxx" ? 0 : parseInt(fullKmMatch[2], 10);
         mileageKm = thousands * 1000 + hundreds;
+    } else if (xxxOnlyMatch) {
+        // Zápis "396xxx" nebo "240 xxx" (i když prodejce zapomněl napsat "km")
+        mileageKm = parseInt(xxxOnlyMatch[1], 10) * 1000;
     } else if (simpleKmMatch) {
         mileageKm = parseInt(simpleKmMatch[1], 10);
     } else {
         for (const m of textKmMatches) {
-            const raw = m[1];
+            const raw = m[1].toLowerCase().trim();
             if (/^\d{4}$/.test(raw) && isPlausibleYear(parseInt(raw, 10))) continue; // není to rok
-            mileageKm = parseInt(raw.replace(/[\s.]/g, ""), 10);
+            if (raw.includes("tis")) {
+                mileageKm = parseInt(raw, 10) * 1000;
+            } else {
+                const cleaned = raw.replace(/xxx/g, "000").replace(/[\s.,]/g, "");
+                mileageKm = parseInt(cleaned, 10);
+            }
             break;
         }
     }
@@ -490,7 +660,7 @@ function analyzeAdText(text, titleText = "") {
         }
         // Když objem v textu není, odhadneme ho podle názvu modelu (tabulka MOTO_CCM v data.js)
         if (ccm === null) {
-            const inferred = inferCcmFromModel(normalized);
+            const inferred = inferCcmFromModel(normalized, year);
             if (inferred !== null) {
                 ccm = inferred;
                 ccmInferred = true;
@@ -512,7 +682,12 @@ function analyzeAdText(text, titleText = "") {
 }
 
 // Najde objem motoru podle názvu modelu v už normalizovaném textu inzerátu
-function inferCcmFromModel(normalizedText) {
+function inferCcmFromModel(normalizedText, year = null) {
+    if (modelMatches(normalizedText, "MT-03")) {
+        if (year !== null && year <= 2014) return 660;
+        if (year !== null && year >= 2016) return 321;
+        return null; // pokud rok nevíme, raději neodhadujeme
+    }
     for (const [model, ccm] of Object.entries(MOTO_CCM)) {
         if (modelMatches(normalizedText, model)) return ccm;
     }
@@ -526,7 +701,8 @@ function evaluateSingleAd(ad, filters, mustHaveWords, mustNotHaveWords) {
     const normalizedText = normalizeText(rawText);
 
     const adStats = ad._bssStats || analyzeAdText(rawText, titleEl ? titleEl.textContent : "");
-    renderBadges(ad, adStats, findVinInText(rawText));
+    const vin = ad._bssVin !== undefined ? ad._bssVin : findVinInText(rawText);
+    renderBadges(ad, adStats, vin);
 
     let matches = true;
 
@@ -867,14 +1043,15 @@ function initDetailBadges() {
         h1.parentElement;
     const descText = (descEl ? visibleTextOf(descEl) : "").slice(0, 4000);
 
-    const stats = analyzeAdText(`${titleText} ${descText}`, titleText);
-    const bar = buildBadges(stats);
+    const fullText = `${titleText} ${descText}`;
+    const stats = analyzeAdText(fullText, titleText);
+    const vin = findVinInText(fullText);
+
+    const bar = buildBadges(stats, vin);
     bar.classList.add("bss-detail-badges");
 
-    const vin = findVinInText(`${titleText} ${descText}`);
-    if (vin) bar.insertBefore(buildVinCheckLink(vin), bar.firstChild);
-
-    h1.insertAdjacentElement("afterend", bar);
+    const headerRow = h1.closest(".listainzerat, .inzeratydetail") || h1;
+    headerRow.insertAdjacentElement("afterend", bar);
 }
 
 
@@ -979,14 +1156,19 @@ async function enrichAdsFromDetails() {
     try {
         let job;
         while ((job = nextAdNeedingDetails())) {
+            // Pokud uživatel mezitím kliknul na načítání dalších stránek, přerušíme dotahování detailů
+            if (isFetchingMore) break;
+
             const { ad, link, listStats } = job;
             ad.dataset.bssDetail = "1";
             if (statusEl) statusEl.textContent = "⏳ Doplňuji údaje z detailů inzerátů…";
 
             try {
                 const detail = await fetchDetailText(link.href);
-                const detailStats = analyzeAdText(`${detail.title} ${detail.text}`, detail.title);
+                const fullDetailText = `${detail.title} ${detail.text}`;
+                const detailStats = analyzeAdText(fullDetailText, detail.title);
                 ad._bssStats = mergeStats(listStats, detailStats);
+                ad._bssVin = findVinInText(fullDetailText);
 
                 const filters = getFormFilters();
                 evaluateSingleAd(ad, filters, parseKeywords(filters.keywordsIn), parseKeywords(filters.keywordsOut));
@@ -999,7 +1181,7 @@ async function enrichAdsFromDetails() {
         }
     } finally {
         isEnrichingDetails = false;
-        updateStatusText();
+        if (!isFetchingMore) updateStatusText();
     }
 }
 
