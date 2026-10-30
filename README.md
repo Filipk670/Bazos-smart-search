@@ -1,45 +1,37 @@
-# Bazoš Smart Search
+# 🚗🏍️ Bazoš Smart Search
 
-Chrome rozšíření, které na výpisech inzerátů na `auto.bazos.cz` a `motorky.bazos.cz` přidává chytré filtrování a štítky s klíčovými údaji.
+Chytré filtrování pro český Bazoš (`auto.bazos.cz` a `motorky.bazos.cz`). Rozšíření do prohlížeče, které z prastarého vyhledávání dělá moderní nástroj na úrovni Sauto / TipCars. Přidává pokročilé filtry, automaticky vyhazuje náhradní díly a na pozadí samo dotahuje další inzeráty z dalších stránek.
 
+## 🌟 Hlavní funkce
 
-## Funkce
+*   **Pokročilé filtry:** Filtrování podle výkonu (kW/PS), roku výroby, maximálního nájezdu, objemu motoru (ccm) a přesného modelu.
+*   **Chytrá extrakce dat:** Skript čte texty inzerátů a automaticky z nich vytahuje skryté parametry, které Bazoš normálně neumí filtrovat. Zvládá přečíst i české patvary jako `najeto 185tkm` nebo `396xxx`.
+*   **Vizuální štítky:** Ke každému inzerátu rovnou přidává barevné štítky s palivem, rokem a výkonem.
+*   **Auto-Fetch (Nekonečné načítání):** Pokud tvému přísnému filtru vyhovují na první stránce jen 2 auta, addon sám na pozadí bleskově projde další stránky Bazoše a dosype ti na obrazovku další vyhovující inzeráty.
+*   **Odstranění plevele:** Automaticky skrývá inzeráty na náhradní díly, vraky, pneumatiky a výkupy.
+*   **Kontrola VIN:** Pokud prodejce uvede v textu VIN kód, addon vygeneruje tlačítko pro rychlé ověření historie vozidla přes Autokuk.cz.
+*   **Čistý design:** Možnost jedním kliknutím skrýt levé menu kategorií a původní Bazoš vyhledávání pro maximální přehlednost.
 
-- **Filtrování výpisu:** značka, model, palivo, výkon (kW), rok výroby, max. nájezd, cena, klíčová slova (musí / nesmí obsahovat).
-- **Motorky:** filtr objemu (ccm) a výkonu pro řidičský průkaz A2.
-- **Štítky u každého inzerátu:** rok, výkon, palivo, nájezd a u motorek objem.
-- **Doplnění údajů z detailu:** když výpis neobsahuje rok, nájezd nebo palivo (Bazoš zkracuje popis), rozšíření stáhne detail inzerátu. Stahuje postupně s pauzou 1,5 s a výsledky ukládá do paměti prohlížeče na dobu session.
-- **Skrytí náhradních dílů a poptávek** (zapnuto ve výchozím stavu).
-- **Načtení dalších stránek:** tlačítko najde další vyhovující inzeráty.
-- **Štítky na detailu inzerátu** pod nadpisem.
-- **Skrytí původního menu** (volitelné, vypnuto ve výchozím stavu): dva přepínače v horní liště. Jeden skryje levé menu kategorií, druhý původní vyhledávací řádek.
+## 🛠️ Instalace (Chrome, Brave, Edge)
 
-## Instalace
+Jelikož rozšíření zatím není v oficiálním obchodu Chrome Web Store, instaluje se v režimu pro vývojáře:
 
-1. Stáhni nejnovější ZIP ze stránky **Releases** a rozbal ho.
-2. V Chrome otevři `chrome://extensions`.
-3. Zapni **Režim pro vývojáře** (vpravo nahoře).
-4. Klikni na **Načíst rozbalený** a vyber rozbalenou složku.
+1. Stáhněte si tento repozitář (zelené tlačítko **Code** -> **Download ZIP**) a rozbalte složku do počítače.
+2. Otevřete prohlížeč a do adresního řádku zadejte:
+   * Chrome: `chrome://extensions/`
+   * Brave: `brave://extensions/`
+   * Edge: `edge://extensions/`
+3. Vpravo nahoře zapněte **Režim pro vývojáře** (Developer mode).
+4. Vlevo nahoře klikněte na **Načíst rozbalené** (Load unpacked) a vyberte rozbalenou složku `bazos-smart-search`.
+5. Hotovo! Otevřete [auto.bazos.cz](https://auto.bazos.cz) nebo [motorky.bazos.cz](https://motorky.bazos.cz) a chytrý panel se automaticky zobrazí nahoře nad inzeráty.
 
-Vyžaduje Chrome 79 nebo novější.
+## 👨‍💻 Technologie
 
-## Použití
+*   Vanilla JavaScript (ES6+)
+*   Manifest V3
+*   CSS3
+*   Bez externích závislostí a frameworků (čistý a rychlý chod).
 
-Otevři výpis aut nebo motorek na Bazoši, nastav filtry a klikni na **Filtrovat inzeráty**. Filtry se ukládají v prohlížeči a zůstanou po načtení stránky.
+## 📄 Licence
 
-## Upozornění
-
-- Seznamy značek, modelů a objemů motorek jsou z velké části doplněné ručně a nejsou všechny ověřené. Chyby hlaste v sekci Issues.
-- Rozšíření pracuje jen se stránkami Bazoše. Nic neodesílá na jiné servery a všechna nastavení zůstávají v prohlížeči.
-- Projekt není spojený s Bazoš.cz. Změny na stránkách Bazoše mohou rozbít některé funkce, pak je potřeba upravit kód.
-
-## Struktura projektu
-
-- `manifest.json`: nastavení rozšíření
-- `content.js`: logika filtrů, štítků a doplňování údajů
-- `data.js`: značky, modely, objemy motorek a regulární výrazy
-- `style.css`: vzhled
-
-## Licence
-
-Zatím bez licence. Všechna práva vyhrazena autorem.
+Tento projekt je licencován pod **MIT License** – můžete jej volně používat, upravovat i šířit. Autor nenese odpovědnost za případné změny ve struktuře webu Bazoš.cz, které by mohly ovlivnit funkčnost rozšíření.
