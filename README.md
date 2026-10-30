@@ -34,4 +34,4 @@ Jelikož rozšíření zatím není v oficiálním obchodu Chrome Web Store, ins
 
 ## 📄 Licence
 
-Tento projekt je licencován pod **MIT License** – můžete jej volně používat, upravovat i šířit. Autor nenese odpovědnost za případné změny ve struktuře webu Bazoš.cz, které by mohly ovlivnit funkčnost rozšíření.
+Tento projekt je licencován pod **MIT License**
