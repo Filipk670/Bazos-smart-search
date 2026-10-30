@@ -70,10 +70,17 @@ function escapeRegex(str) {
 
 // Model se hledá jako celé slovo: "A1" nesedí na "A100", ale "Mazda 3" sedí na "mazda3", "mazda-3" i "mazda 3"
 function modelMatches(normalizedText, model) {
+    // Alternativní označení (E320 = Třída E, 320d = Řada 3 ...) z data.js
+    const aliases = Object.prototype.hasOwnProperty.call(MODEL_ALIASES, model) ? MODEL_ALIASES[model] : null;
+    if (aliases) {
+        return aliases.some((src) => new RegExp(`(?<![\\p{L}\\p{N}])(?:${src})(?!\\p{N})`, "u").test(normalizedText));
+    }
     const tokens = normalizeText(model).split(/[\s.-]+/).filter(Boolean).map(escapeRegex);
     if (tokens.length === 0) return true;
     const pattern = tokens.join("[\\s.-]?");
-    const re = new RegExp(`(?<![\\p{L}\\p{N}])${pattern}(?![\\p{L}\\p{N}])`, "u");
+    // Čistě číselný model (např. 107, 2107) nesmí sedět na část většího čísla ("107 000 km")
+    const end = /^\d+$/.test(model) ? `${MODEL_CODE_END}(?![\\p{L}\\p{N}])` : "(?![\\p{L}\\p{N}])";
+    const re = new RegExp(`(?<![\\p{L}\\p{N}])${pattern}${end}`, "u");
     return re.test(normalizedText);
 }
 
@@ -643,7 +650,10 @@ function setupButtons() {
             const brandData = filters.brand ? ACTIVE_DATA[filters.brand] : null;
             const ownPage = Boolean(brandData && BAZOS_MENU_PATHS.has(brandData.path));
             targetPath = ownPage ? brandData.path : "/";
-            searchQuery = [!ownPage && brandData ? brandData.name : "", filters.model].filter(Boolean).join(" ");
+            // Vyhledávání na Bazoši je jen slovní: model s alternativními označeními (E320, 320d...) hledáme
+            // jen podle značky a výsledky se filtrují v prohlížeči (modelMatches), jinak by se ztratily.
+            const modelForServer = filters.model && !Object.prototype.hasOwnProperty.call(MODEL_ALIASES, filters.model) ? filters.model : "";
+            searchQuery = [!ownPage && brandData ? brandData.name : "", modelForServer].filter(Boolean).join(" ");
         }
 
         const params = new URLSearchParams();
