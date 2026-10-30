@@ -9,6 +9,7 @@ const APP_VERSION = "0.6";
 const MIN_YEAR = 1970;
 const SLIDER_MIN_YEAR = 1999;
 const MAX_YEAR = new Date().getFullYear();
+const MAX_PRICE = 1000000; // horní hranice posuvníku ceny (1 000 000 Kč)
 const REQUEST_DELAY_MS = 800; // pauza mezi načítáním stránek, aby to nepůsobilo jako scraping
 const AUTO_FETCH_THRESHOLD = 6; // při automatickém dotahování chceme alespoň tolik vyhovujících
 const MAX_PAGES_PER_SCAN = 12;
