@@ -213,6 +213,10 @@ function initSmartSearch() {
           <label>Rok výroby</label>
           <span id="bss-year-label" class="bss-range-value">${SLIDER_MIN_YEAR} – ${MAX_YEAR}</span>
         </div>
+        <div class="bss-range">
+          <input type="number" id="bss-year-from" placeholder="Od" min="1" step="1">
+          <input type="number" id="bss-year-to" placeholder="Do" min="1" step="1">
+        </div>
         <div class="bss-dual-slider">
           <div class="bss-slider-track">
             <div id="bss-year-fill" class="bss-slider-fill"></div>
@@ -240,6 +244,10 @@ function initSmartSearch() {
         <div class="bss-label-row">
           <label>Cena</label>
           <span id="bss-price-label" class="bss-range-value">0 Kč – 1 000 000 Kč</span>
+        </div>
+        <div class="bss-range">
+          <input type="number" id="bss-price-from" placeholder="Od (Kč)" min="1">
+          <input type="number" id="bss-price-to" placeholder="Do (Kč)" min="1">
         </div>
         <div class="bss-dual-slider">
           <div class="bss-slider-track">
@@ -340,12 +348,34 @@ function populateModels(selectedBrand, selectedModel = "") {
     });
 }
 
+function clampYear(v) {
+    return Math.max(SLIDER_MIN_YEAR, Math.min(MAX_YEAR, v));
+}
+
+// Nastaví číselné pole: buď zobrazenou hodnotu z posuvníku, nebo ručně zadanou (označí se jako "typed")
+function setTypedField(id, displayValue, typedValue) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (typedValue !== null && typedValue !== undefined && typedValue !== "") {
+        el.value = typedValue;
+        el.dataset.typed = "1";
+    } else {
+        el.value = displayValue;
+        el.dataset.typed = "";
+    }
+}
+
 function setupSliders() {
     const yearMinInput = document.getElementById("bss-year-min");
     const yearMaxInput = document.getElementById("bss-year-max");
     const priceMinInput = document.getElementById("bss-price-min");
     const priceMaxInput = document.getElementById("bss-price-max");
+    const yearFromEl = document.getElementById("bss-year-from");
+    const yearToEl = document.getElementById("bss-year-to");
+    const priceFromEl = document.getElementById("bss-price-from");
+    const priceToEl = document.getElementById("bss-price-to");
 
+    // Posuvníky: při pohybu se ručně zadané hodnoty nahradí hodnotami z posuvníku
     yearMinInput.addEventListener("input", () => {
         if (parseInt(yearMinInput.value, 10) > parseInt(yearMaxInput.value, 10)) {
             yearMinInput.value = yearMaxInput.value;
@@ -374,15 +404,80 @@ function setupSliders() {
         updateSlidersUI();
     });
 
+    // Ručně zadaný rok: může být mimo rozsah posuvníku, posuvník se nastaví na nejbližší hodnotu
+    yearFromEl.addEventListener("change", () => {
+        const raw = parseInt(yearFromEl.value, 10);
+        if (!(raw > 0)) {
+            yearFromEl.value = yearMinInput.value;
+            yearFromEl.dataset.typed = "";
+            updateSlidersUI(false);
+            return;
+        }
+        const pos = clampYear(raw);
+        yearMinInput.value = pos;
+        if (pos > parseInt(yearMaxInput.value, 10)) yearMaxInput.value = pos;
+        yearFromEl.dataset.typed = "1";
+        updateSlidersUI(false);
+    });
+
+    yearToEl.addEventListener("change", () => {
+        const raw = parseInt(yearToEl.value, 10);
+        if (!(raw > 0)) {
+            yearToEl.value = yearMaxInput.value;
+            yearToEl.dataset.typed = "";
+            updateSlidersUI(false);
+            return;
+        }
+        const pos = clampYear(raw);
+        yearMaxInput.value = pos;
+        if (pos < parseInt(yearMinInput.value, 10)) yearMinInput.value = pos;
+        yearToEl.dataset.typed = "1";
+        updateSlidersUI(false);
+    });
+
+    // Ručně zadaná cena: může být i nad 1 000 000 Kč (posuvník se nastaví na krajní hodnotu)
+    priceFromEl.addEventListener("change", () => {
+        const raw = parseInt(priceFromEl.value, 10);
+        if (!(raw > 0)) {
+            priceFromEl.value = sliderToPrice(priceMinInput.value);
+            priceFromEl.dataset.typed = "";
+            updateSlidersUI(false);
+            return;
+        }
+        const pos = priceToSlider(raw);
+        priceMinInput.value = pos;
+        if (pos > parseInt(priceMaxInput.value, 10)) priceMaxInput.value = pos;
+        priceFromEl.dataset.typed = "1";
+        updateSlidersUI(false);
+    });
+
+    priceToEl.addEventListener("change", () => {
+        const raw = parseInt(priceToEl.value, 10);
+        if (!(raw > 0)) {
+            priceToEl.value = sliderToPrice(priceMaxInput.value);
+            priceToEl.dataset.typed = "";
+            updateSlidersUI(false);
+            return;
+        }
+        const pos = priceToSlider(raw);
+        priceMaxInput.value = pos;
+        if (pos < parseInt(priceMinInput.value, 10)) priceMinInput.value = pos;
+        priceToEl.dataset.typed = "1";
+        updateSlidersUI(false);
+    });
+
     updateSlidersUI();
 }
 
-function updateSlidersUI() {
+// syncNumbers = true: číselná pole se přepíšou hodnotami z posuvníku (ruční zadání se zruší)
+function updateSlidersUI(syncNumbers = true) {
     // 1. Rok výroby
     const yearMinEl = document.getElementById("bss-year-min");
     const yearMaxEl = document.getElementById("bss-year-max");
     const yearLabel = document.getElementById("bss-year-label");
     const yearFill = document.getElementById("bss-year-fill");
+    const yearFromEl = document.getElementById("bss-year-from");
+    const yearToEl = document.getElementById("bss-year-to");
 
     if (yearMinEl && yearMaxEl) {
         const yMin = parseInt(yearMinEl.value, 10);
@@ -393,9 +488,16 @@ function updateSlidersUI() {
 
         yearFill.style.left = `${leftPct}%`;
         yearFill.style.width = `${rightPct - leftPct}%`;
-        yearLabel.textContent = `${yMin} – ${yMax}`;
-        // Pokud jsou oba jezdce u pravého kraje, dáme levému vyšší z-index, aby šel chytit myší
+
+        const effFrom = yearFromEl.dataset.typed === "1" ? parseInt(yearFromEl.value, 10) : yMin;
+        const effTo = yearToEl.dataset.typed === "1" ? parseInt(yearToEl.value, 10) : yMax;
+        yearLabel.textContent = `${effFrom} – ${effTo}`;
         yearMinEl.style.zIndex = yMin > MAX_YEAR - 2 ? "3" : "2";
+
+        if (syncNumbers) {
+            setTypedField("bss-year-from", yMin, null);
+            setTypedField("bss-year-to", yMax, null);
+        }
     }
 
     // 2. Cena
@@ -403,6 +505,8 @@ function updateSlidersUI() {
     const priceMaxEl = document.getElementById("bss-price-max");
     const priceLabel = document.getElementById("bss-price-label");
     const priceFill = document.getElementById("bss-price-fill");
+    const priceFromEl = document.getElementById("bss-price-from");
+    const priceToEl = document.getElementById("bss-price-to");
 
     if (priceMinEl && priceMaxEl) {
         const sMin = parseInt(priceMinEl.value, 10);
@@ -415,8 +519,16 @@ function updateSlidersUI() {
 
         priceFill.style.left = `${leftPct}%`;
         priceFill.style.width = `${rightPct - leftPct}%`;
-        priceLabel.textContent = `${formatPriceLabel(pMin)} – ${formatPriceLabel(pMax)}`;
+
+        const effPMin = priceFromEl.dataset.typed === "1" ? parseInt(priceFromEl.value, 10) : pMin;
+        const effPMax = priceToEl.dataset.typed === "1" ? parseInt(priceToEl.value, 10) : pMax;
+        priceLabel.textContent = `${formatPriceLabel(effPMin)} – ${formatPriceLabel(effPMax)}`;
         priceMinEl.style.zIndex = sMin > 950 ? "3" : "2";
+
+        if (syncNumbers) {
+            setTypedField("bss-price-from", pMin, null);
+            setTypedField("bss-price-to", pMax, null);
+        }
     }
 }
 
@@ -425,13 +537,26 @@ function getFormFilters() {
     const ccmMinEl = document.getElementById("bss-ccm-min");
     const ccmMaxEl = document.getElementById("bss-ccm-max");
 
-    const rawYearMin = parseInt(document.getElementById("bss-year-min").value, 10);
-    const rawYearMax = parseInt(document.getElementById("bss-year-max").value, 10);
-    // Pokud je posuvník roku v plném výchozím rozsahu (1999–2026), nefiltrujeme rok
-    const isYearFiltered = rawYearMin > SLIDER_MIN_YEAR || rawYearMax < MAX_YEAR;
+    const yearFromEl = document.getElementById("bss-year-from");
+    const yearToEl = document.getElementById("bss-year-to");
+    const priceFromEl = document.getElementById("bss-price-from");
+    const priceToEl = document.getElementById("bss-price-to");
 
-    const rawPriceMin = sliderToPrice(document.getElementById("bss-price-min").value);
-    const rawPriceMax = sliderToPrice(document.getElementById("bss-price-max").value);
+    // Rok: ručně zadaná hodnota má přednost; posuvník filtruje jen mimo výchozí rozsah
+    const sliderYearMin = parseInt(document.getElementById("bss-year-min").value, 10);
+    const sliderYearMax = parseInt(document.getElementById("bss-year-max").value, 10);
+    const yearMin =
+        yearFromEl.dataset.typed === "1" ? parseInt(yearFromEl.value, 10) : sliderYearMin > SLIDER_MIN_YEAR ? sliderYearMin : null;
+    const yearMax =
+        yearToEl.dataset.typed === "1" ? parseInt(yearToEl.value, 10) : sliderYearMax < MAX_YEAR ? sliderYearMax : null;
+
+    // Cena: stejná logika
+    const sliderPriceMin = sliderToPrice(document.getElementById("bss-price-min").value);
+    const sliderPriceMax = sliderToPrice(document.getElementById("bss-price-max").value);
+    const priceFromTyped = priceFromEl.dataset.typed === "1";
+    const priceToTyped = priceToEl.dataset.typed === "1";
+    const priceMinNum = priceFromTyped ? parseInt(priceFromEl.value, 10) : sliderPriceMin;
+    const priceMaxNum = priceToTyped ? parseInt(priceToEl.value, 10) : sliderPriceMax;
 
     return {
         brand: document.getElementById("bss-brand").value,
@@ -441,11 +566,11 @@ function getFormFilters() {
         ccmMax: ccmMaxEl ? parseInt(ccmMaxEl.value, 10) || null : null,
         powerMin: parseInt(document.getElementById("bss-power-min").value, 10) || null,
         powerMax: parseInt(document.getElementById("bss-power-max").value, 10) || null,
-        yearMin: isYearFiltered ? rawYearMin : null,
-        yearMax: isYearFiltered ? rawYearMax : null,
+        yearMin: yearMin,
+        yearMax: yearMax,
         kmMax: parseInt(document.getElementById("bss-km-max").value, 10) || null,
-        priceMin: rawPriceMin > 0 ? String(rawPriceMin) : "",
-        priceMax: rawPriceMax < MAX_PRICE ? String(rawPriceMax) : "",
+        priceMin: priceFromTyped || sliderPriceMin > 0 ? String(priceMinNum) : "",
+        priceMax: priceToTyped || sliderPriceMax < MAX_PRICE ? String(priceMaxNum) : "",
         keywordsIn: document.getElementById("bss-keywords-in").value,
         keywordsOut: document.getElementById("bss-keywords-out").value,
         hideParts: document.getElementById("bss-hide-parts").checked,
@@ -473,10 +598,12 @@ function restoreSavedFilters() {
         document.getElementById("bss-power-min").value = filters.powerMin || "";
         document.getElementById("bss-power-max").value = filters.powerMax || "";
 
-        const yMin = filters.yearMin ? Math.max(SLIDER_MIN_YEAR, Math.min(MAX_YEAR, filters.yearMin)) : SLIDER_MIN_YEAR;
-        const yMax = filters.yearMax ? Math.max(SLIDER_MIN_YEAR, Math.min(MAX_YEAR, filters.yearMax)) : MAX_YEAR;
+        const yMin = filters.yearMin ? clampYear(filters.yearMin) : SLIDER_MIN_YEAR;
+        const yMax = filters.yearMax ? clampYear(filters.yearMax) : MAX_YEAR;
         document.getElementById("bss-year-min").value = yMin;
         document.getElementById("bss-year-max").value = yMax;
+        setTypedField("bss-year-from", yMin, filters.yearMin || null);
+        setTypedField("bss-year-to", yMax, filters.yearMax || null);
 
         document.getElementById("bss-km-max").value = filters.kmMax || "";
 
@@ -484,13 +611,15 @@ function restoreSavedFilters() {
         const pMax = filters.priceMax ? priceToSlider(filters.priceMax) : 1000;
         document.getElementById("bss-price-min").value = pMin;
         document.getElementById("bss-price-max").value = pMax;
+        setTypedField("bss-price-from", sliderToPrice(pMin), filters.priceMin || null);
+        setTypedField("bss-price-to", sliderToPrice(pMax), filters.priceMax || null);
 
         document.getElementById("bss-keywords-in").value = filters.keywordsIn || "";
         document.getElementById("bss-keywords-out").value = filters.keywordsOut || "";
         document.getElementById("bss-hide-parts").checked = filters.hideParts !== false;
         document.getElementById("bss-include-unknown").checked = Boolean(filters.includeUnknown);
 
-        updateSlidersUI();
+        updateSlidersUI(false);
     } catch (e) {
         console.error("Chyba při načítání uložených filtrů:", e);
     }
