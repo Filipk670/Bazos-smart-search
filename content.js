@@ -176,7 +176,8 @@ function initSmartSearch() {
           <option value="diesel">Nafta</option>
           <option value="petrol">Benzín</option>
           <option value="lpg">LPG / CNG</option>
-          <option value="hybrid">Hybrid / Elektro</option>
+          <option value="hybrid">Hybrid</option>
+          <option value="ev">Elektro</option>
         </select>
       </div>
     `;
@@ -811,9 +812,13 @@ function analyzeAdText(text, titleText = "") {
     // 6. Palivo (jen auta)
     const detectedFuels = [];
     if (!IS_MOTO) {
-        for (const [key, data] of Object.entries(FUEL_PATTERNS)) {
-            if (data.regex.test(cleanText)) {
-                detectedFuels.push(key);
+        if (ELECTRIC_ONLY_REGEX.test(cleanText)) {
+            detectedFuels.push("ev");
+        } else {
+            for (const [key, data] of Object.entries(FUEL_PATTERNS)) {
+                if (data.regex.test(cleanText)) {
+                    detectedFuels.push(key);
+                }
             }
         }
     }
