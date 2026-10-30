@@ -541,10 +541,19 @@ const FUEL_PATTERNS = {
         regex: /(?<!\p{L})(lpg|cng|plyn|autoplyn)(?![\p{L}\p{N}])/iu
     },
     hybrid: {
-        label: "Hybrid/EV",
-        regex: /(?<!\p{L})(hybrid|hybridn[ií]|phev|mhev|elektro|elektromobil|bev|e-tron|enyaq|id\.3|id\.4|id\.5)(?![\p{L}\p{N}])/iu
+        label: "Hybrid",
+        regex: /(?<!\p{L})(hybrid|hybridn[ií]|phev|mhev)(?![\p{L}\p{N}])/iu
+    },
+    ev: {
+        label: "Elektro",
+        regex: /(?<!\p{L})(elektro|elektromobil\p{L}*|bev|e-tron|enyaq|id\.3|id\.4|id\.5|kona\s?(?:ev|electric))(?![\p{L}\p{N}])/iu
     }
 };
+
+// Modely, které se u žádné verze neprodávají se spalovacím motorem ani jako hybrid.
+// U nich je palivo vždy Elektro (i když popis zmiňuje něco jiného, např. "16V" u baterie).
+// Záměrně bez modelů s hybridní nebo spalovací verzí (Kona, Niro, Ioniq, MG ZS, Seal U, Mazda MX-30 ...).
+const ELECTRIC_ONLY_REGEX = /(?<![\p{L}\p{N}])(tesla|model\s?[3sxy]|enyaq|elroq|epiq|id[\s.]?(?:3|4|5|7|buzz)|e-?tron|ev\s?6|e-?soul|ioniq\s?[56]|atto\s?[23]|dolphin|seal(?!\s?(?:u|5|6)(?![\p{L}\p{N}]))|sealion\s?7|leaf|ariya|zoe|bz4x|solterra|ex30|ex90|c40|dacia\s?spring|taycan|i-?pace|eq[abces]|eqv|zs\s?ev|cyberster|cupra\s?(?:born|tavascan)|polestar\s?(?:[2-5]|7)|aceman|honda\s?e|eletre|nio\s?(?:et[57]|ec6)|zeekr\s?(?:001|007|009|7x|x)|xpeng\s?(?:g6|g9|p7)|lexus\s?rz|smart\s?#[13])(?![\p{L}\p{N}])/iu;
 
 // Slova typická pro inzeráty náhradních dílů, vraků nebo výkupu.
 // Záměrně bez obecných slov (disky, pneu, rozprodám, překáží), která se objevují i u normálních prodejů aut.
