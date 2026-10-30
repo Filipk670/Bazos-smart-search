@@ -6,6 +6,7 @@ Chytré filtrování pro český Bazoš (`auto.bazos.cz` a `motorky.bazos.cz`). 
 
 ## 🌟 Hlavní funkce
 <img width="747" height="196" alt="Snímek obrazovky 2026-10-30 170125" src="https://github.com/user-attachments/assets/830201dd-867d-410f-925f-569a6b2d894c" />
+
 *   **Pokročilé filtry:** Filtrování podle výkonu (kW/PS), roku výroby, maximálního nájezdu, objemu motoru (ccm) a přesného modelu.
 *   **Chytrá extrakce dat:** Skript čte texty inzerátů a automaticky z nich vytahuje skryté parametry, které Bazoš normálně neumí filtrovat. Zvládá přečíst i české patvary jako `najeto 185tkm` nebo `396xxx`.
 *   **Vizuální štítky:** Ke každému inzerátu rovnou přidává barevné štítky s palivem, rokem a výkonem.
