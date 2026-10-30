@@ -1,4 +1,4 @@
-# Bazoš Smart Search (Auta & Motorky)
+# Bazoš Smart Search
 
 Chrome rozšíření, které na výpisech inzerátů na `auto.bazos.cz` a `motorky.bazos.cz` přidává chytré filtrování a štítky s klíčovými údaji.
 
