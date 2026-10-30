@@ -2,7 +2,7 @@
 
 <img width="1265" height="349" alt="Snímek obrazovky 2026-10-30 165838" src="https://github.com/user-attachments/assets/eb6165d7-8515-49f9-bc32-ac2e12cf6e87" />
 
-Chytré filtrování pro český Bazoš (`auto.bazos.cz` a `motorky.bazos.cz`). Rozšíření do prohlížeče, které z prastarého vyhledávání dělá moderní nástroj na úrovni Sauto / TipCars. Přidává pokročilé filtry, automaticky vyhazuje náhradní díly a na pozadí samo dotahuje další inzeráty z dalších stránek.
+Chytré filtrování pro český Bazoš (`auto.bazos.cz` a `motorky.bazos.cz`). Rozšíření do prohlížeče, které přidává pokročilé filtry, automaticky vyhazuje náhradní díly a na pozadí samo dotahuje další inzeráty z dalších stránek.
 
 ## 🌟 Hlavní funkce
 <img width="747" height="196" alt="Snímek obrazovky 2026-10-30 170125" src="https://github.com/user-attachments/assets/830201dd-867d-410f-925f-569a6b2d894c" />
