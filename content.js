@@ -1,11 +1,11 @@
-// Bazoš Smart Search – content script (v0.6)
+// Bazoš Smart Search – content script (v0.7)
 
 const IS_MOTO = window.location.hostname === "motorky.bazos.cz";
 const ACTIVE_DATA = IS_MOTO ? MOTO_DATA : CAR_DATA;
 const STORAGE_KEY = IS_MOTO ? "bss_moto_filters" : "bss_car_filters";
 const AUTOFETCH_KEY = IS_MOTO ? "bss_moto_autofetch" : "bss_car_autofetch";
 
-const APP_VERSION = "0.6";
+const APP_VERSION = "0.7";
 const MIN_YEAR = 1970;
 const SLIDER_MIN_YEAR = 1999;
 const MAX_YEAR = new Date().getFullYear();
