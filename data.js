@@ -530,11 +530,11 @@ const MOTO_CCM = {
 const FUEL_PATTERNS = {
     diesel: {
         label: "Nafta",
-        regex: /(?<!\p{L})(naft[aouyě]|naftov[aéý]|diesel|dieslov[aéý]|tdi|sdi|hdi|ehdi|bluehdi|dci|cdti|tdci|jtd|jtdm|multijet|crdi|d4d|d-4d|di-d|did|cdi|bluetec|td|tds|crd|d3|d4|d5|2\.0d|3\.0d|1\.9d|1\.7d|\d[.,]\d\s?d)(?![\p{L}\p{N}])/iu
+        regex: /(?<!\p{L})(naft[aouyě]|naftov[aéý]|diesel|dieslov[aéý]|tdi|sdi|hdi|ehdi|bluehdi|dci|cdti|tdci|jtd|jtdm|multijet|crdi|d4d|d-4d|di-d|did|cdi|bluetec|td|tds|crd|d3|d4|d5|2\.0d|3\.0d|1\.9d|1\.7d|\d[.,]\d\s?d|(?<![\p{N}.,])[1-7]\d{2}d)(?![\p{L}\p{N}])/iu
     },
     petrol: {
         label: "Benzín",
-        regex: /(?<!\p{L})(benz[ií]n\p{L}*|benzinov[aéý]|tsi|tfsi|fsi|mpi|htp|vti|puretech|tce|ecoboost|gdi|tgdi|t-gdi|vtec|i-vtec|vvti|vvt-i|skyactiv-g|skyactiv-x|16v|8v|1\.2i|1\.4i|1\.6i|1\.8i|2\.0i|1\.8t|\d[.,]\d\s?[it])(?![\p{L}\p{N}])/iu
+        regex: /(?<!\p{L})(benz[ií]n\p{L}*|benzinov[aéý]|tsi|tfsi|fsi|mpi|htp|vti|puretech|tce|ecoboost|gdi|tgdi|t-gdi|vtec|i-vtec|vvti|vvt-i|skyactiv-g|skyactiv-x|16v|8v|1\.2i|1\.4i|1\.6i|1\.8i|2\.0i|1\.8t|\d[.,]\d\s?[it]|(?<![\p{N}.,])[1-7]\d{2}i)(?![\p{L}\p{N}])/iu
     },
     lpg: {
         label: "LPG/CNG",
@@ -553,15 +553,32 @@ const FUEL_PATTERNS = {
 // Modely, které se u žádné verze neprodávají se spalovacím motorem ani jako hybrid.
 // U nich je palivo vždy Elektro (i když popis zmiňuje něco jiného, např. "16V" u baterie).
 // Záměrně bez modelů s hybridní nebo spalovací verzí (Kona, Niro, Ioniq, MG ZS, Seal U, Mazda MX-30 ...).
-const ELECTRIC_ONLY_REGEX = /(?<![\p{L}\p{N}])(tesla|model\s?[3sxy]|enyaq|elroq|epiq|id[\s.]?(?:3|4|5|7|buzz)|e-?tron|ev\s?6|e-?soul|ioniq\s?[56]|atto\s?[23]|dolphin|seal(?!\s?(?:u|5|6)(?![\p{L}\p{N}]))|sealion\s?7|leaf|ariya|zoe|bz4x|solterra|ex30|ex90|c40|dacia\s?spring|taycan|i-?pace|eq[abces]|eqv|zs\s?ev|cyberster|cupra\s?(?:born|tavascan)|polestar\s?(?:[2-5]|7)|aceman|honda\s?e|eletre|nio\s?(?:et[57]|ec6)|zeekr\s?(?:001|007|009|7x|x)|xpeng\s?(?:g6|g9|p7)|lexus\s?rz|smart\s?#[13])(?![\p{L}\p{N}])/iu;
+const ELECTRIC_ONLY_REGEX = /(?<![\p{L}\p{N}])(tesla|model\s?3(?![\p{L}\p{N}])|model\s[sxy](?![\p{L}\p{N}])|enyaq|elroq|epiq|id[\s.]?(?:3|4|5|7|buzz)|e-?tron|ev\s?6|e-?soul|ioniq\s?[56]|atto\s?[23]|dolphin|seal(?!\s?(?:u|5|6)(?![\p{L}\p{N}]))|sealion\s?7|leaf|ariya|zoe|bz4x|solterra|ex30|ex90|c40|dacia\s?spring|taycan|i-?pace|eq[abces]|eqv|zs\s?ev|cyberster|cupra\s?(?:born|tavascan)|polestar\s?(?:[2-5]|7)|aceman|honda\s?e|eletre|nio\s?(?:et[57]|ec6)|zeekr\s?(?:001|007|009|7x|x)|xpeng\s?(?:g6|g9|p7)|lexus\s?rz|smart\s?#[13])(?![\p{L}\p{N}])/iu;
 
 // Slova typická pro inzeráty náhradních dílů, vraků nebo výkupu.
 // Záměrně bez obecných slov (disky, pneu, rozprodám, překáží), která se objevují i u normálních prodejů aut.
-const SPARE_PARTS_REGEX = /(?<![\p{L}\p{N}])(na náhradní díly|náhradní díly|veškeré díly|veškeré nd|prodám díly|pouze díly|díly z vozu|díly z tohoto|díly z vozidla|na nd|vraky? na nd|koupím|vykoupím|výkup)(?![\p{L}\p{N}])/iu;
+// Vyhledávání dílů funguje i bez diakritiky (prevodovka = převodovka, tlumic = tlumič)
+function czAccentFree(src) {
+    const map = { á: "a", č: "c", ď: "d", é: "e", ě: "e", í: "i", ň: "n", ó: "o", ř: "r", š: "s", ť: "t", ú: "u", ů: "u", ý: "y", ž: "z" };
+    let out = "";
+    let inClass = false;
+    for (const ch of src) {
+        if (ch === "[") inClass = true;
+        if (ch === "]") inClass = false;
+        if (!inClass && map[ch]) out += `[${ch}${map[ch]}]`;
+        else out += ch;
+    }
+    return out;
+}
+function withoutDiacritics(re) {
+    return new RegExp(czAccentFree(re.source), re.flags);
+}
+
+const SPARE_PARTS_REGEX = withoutDiacritics(/(?<![\p{L}\p{N}])(na\s+náhradní\s+díly|náhradní\s+díly|veškeré\s+(?:díly|nd)|prodám\s+díly|pouze\s+díly|díly\s+z\s+(?:vozu|tohoto|vozidla)|díly\s+na\s+vůz|na\s+nd|vraky?\s+na\s+nd|rozprodám|rozprodej|vymontován\p{L}*|demontován\p{L}*|záruka\s+na\s+vyzkoušení|zasíláme\s+na\s+dobírku|posílám\s+na\s+dobírku|posílame\s+na\s+dobírku|na\s+dobírk\p{L}*|volejte\s+co\s+potřebujete|číslo\s+dílu|kód\s+dílu|číslo\s+skladu|airbagová\s+sada|ekologická\s+likvidace|výkup\s+(?:vozidel|aut|vozů)|koupím|vykoupím|vhodn[ée]\s+pro\s*[:*]|vhodn[ée]\s+pro\s+(?:modely|vozy|vozidla|typy)|pasuje\s+(?:na|do)|sedí\s+na|posílám\s+(?:díl|díly)|pravostranné\s+řízení|z\s+angličana|holý\s+motor|nastrojen\p{L}*\s+motor|motor\s+bez\s+komponent\p{L}*|videa\s+prvního\s+startu|záruk\p{L}*\s+na\s+motor|pneu\p{L}*\s+na\s+disc\p{L}*|prodám\s+sadu\s+(?:4\s+)?(?:zimních|letních))(?![\p{L}\p{N}])/iu);
 
 // Díly a příslušenství poznané podle NADPISU inzerátu (nadpis bývá nejspolehlivější).
 // Záměrně bez barev, obecných slov a názvů částí, které se běžně objevují i v popisech prodeje aut.
-const PART_TITLE_REGEX = /(?<![\p{L}\p{N}])(disk(?:y|ů|u|es)?|kola|kolo|pneu\p{L}*|pneumatik\p{L}*|gumov\p{L}*|vana|vaničk\p{L}*|koberec|koberce|kobercu|kobercích|nosič\p{L}*|nosic\p{L}*|tažn\p{L}*|lišt\p{L}*|blatník\p{L}*|nárazník\p{L}*|zrcátk\p{L}*|reflektor\p{L}*|mřížk\p{L}*|výfuk\p{L}*|kotouč\p{L}*|destičk\p{L}*|potah\p{L}*|autorádi\p{L}*|navigac\p{L}*|kamer\p{L}*|senzor\p{L}*|střešní\s+box|airbag\p{L}*|kapot\p{L}*|chladič\p{L}*|turbo\p{L}*|převodov\p{L}*|startér\p{L}*|alternátor\p{L}*|katalyzátor\p{L}*|díl|díly|příslušenství|doplněk\p{L}*|prodám\s+(?:sadu|kola|disky)|sada\s+(?:kol|disk\p{L}*))(?![\p{L}\p{N}])/iu;
+const PART_TITLE_REGEX = withoutDiacritics(/(?<![\p{L}\p{N}])(disk(?:y|ů|u|es)?|kola|kolo|alu\s+kol\p{L}*|pneu\p{L}*|pneumatik\p{L}*|gumov\p{L}*|poklic\p{L}*|plecháč\p{L}*|rezerv\p{L}*|dojezdov\p{L}*|rakev|5x112|5x100|5x120|5x114|4x108|\d{3}\s?\/\s?\d{2}(?:\s?r\s?\d{2})?|dunlop|michelin|pirelli|bridgestone|goodyear|hankook|nokian|kumho|barum|falken|yokohama|vredestein|toyo|kleber|vana|vaničk\p{L}*|koberec|koberce|kobercu|kobercích|koberečk\p{L}*|nosič\p{L}*|nosic\p{L}*|příčník\p{L}*|hagus\p{L}*|střešní\s+box|tažn\p{L}*|tažné\s+zařízení|lišt\p{L}*|blatník\p{L}*|nárazník\p{L}*|zrcátk\p{L}*|reflektor\p{L}*|mřížk\p{L}*|výfuk\p{L}*|kotouč\p{L}*|destičk\p{L}*|potah\p{L}*|autorádi\p{L}*|rádi[oa]\p{L}*|amundsen|bolero|columbus|navigac\p{L}*|kamer\p{L}*|senzor\p{L}*|airbag\p{L}*|kapot\p{L}*|chladič\p{L}*|chladičov\p{L}*|chladičová\s+stěna|podběh\p{L}*|turbo\p{L}*|turbodmychad\p{L}*|převodov\p{L}*|tgl|mechatronik\p{L}*|hydroměnič|dvouhmot\p{L}*|setrvačník\p{L}*|spojk\p{L}*|startér\p{L}*|alternátor\p{L}*|katalyzátor\p{L}*|dpf|egr|klimakompresor\p{L}*|kompresor\s+klimatizace|ovládání\s+\p{L}+|čerpadl\p{L}*|vstřikovač\p{L}*|ložisk\p{L}*|pružin\p{L}*|tlumi[čc]\p{L}*|poloos\p{L}*|ledvin\p{L}*|těhlic\p{L}*|nápravnic\p{L}*|náprav[ay]?\s+(?:na\s+)?(?:díl|prodám)|kardan\p{L}*|diferenciál\p{L}*|haldex|třmen\p{L}*|brzdič\p{L}*|brzdov\p{L}*|servořízen\p{L}*|servočerpad\p{L}*|hřeben\s+řízení|sloupek\s+řízení|stěrač\p{L}*|pedál\p{L}*|hřídel\p{L}*|klikov\p{L}*|rozvodov\p{L}*|řemen\p{L}*|vačk\p{L}*|ramen[oa]\s+(?:řízení|zavěšení)|motor\s+(?:a\s+převodovk\p{L}*|převodovk\p{L}*|holý|nastrojen\p{L}*)|holý\s+motor|nastrojen\p{L}*|polomotor|blok\s+motoru|hlava\s+motoru|světlomet\p{L}*|xenon\p{L}*|bixenon\p{L}*|mlhovk\p{L}*|čtvrtk\p{L}*|bočnic\p{L}*|šoupačk\p{L}*|víko\s+kufru|stahovačk\p{L}*|5\.\s*dveře|páté\s+dveře|palubk\p{L}*|palubní\s+desk\p{L}*|spínačk\p{L}*|podvolantovk\p{L}*|tapec\p{L}*|roletk\p{L}*|kaslík\p{L}*|sedač\p{L}*\s+(?:do|z)|sedadl\p{L}*\s+(?:do|z)|komfortk\p{L}*|komfortní\s+jednotk\p{L}*|řídicí\s+jednotk\p{L}*|jednotk\p{L}*\s+(?:abs|esp|airbag)|kabeláž\p{L}*|pojistkov\p{L}*|prodám\s+volant\p{L}*|^\s*volant\p{L}*|přívěs\p{L}*|vozík\p{L}*|podložk\p{L}*|spz|šroub\p{L}*|držák\p{L}*|rozprodám\p{L}*|rozprodej\p{L}*|nd|díl|díly|příslušenství|doplněk\p{L}*|prodám\s+(?:sadu|kola|disky)|sada\s+(?:kol|disk\p{L}*|pneu\p{L}*))(?![\p{L}\p{N}])/iu);
 
 // ---- Alternativní označení modelů ----
 // Hledání podle názvu zachytí i označení, která prodejci na Bazoši běžně píšou
