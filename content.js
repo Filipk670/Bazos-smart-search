@@ -132,6 +132,8 @@ function hasActiveClientFilters(filters) {
 function initSmartSearch() {
     if (window.location.pathname.includes("/inzerat/")) {
         initDetailBadges();
+        markDetailBlocks();
+        setupNativeToggles();
         return;
     }
 
@@ -236,16 +238,19 @@ function initSmartSearch() {
 
       <div class="bss-field">
         <label for="bss-km-max">Max. nájezd (km)</label>
-        <select id="bss-km-max">
-          <option value="">Jakýkoliv</option>
-          <option value="25000">Do 25 000 km</option>
-          <option value="50000">Do 50 000 km</option>
-          <option value="100000">Do 100 000 km</option>
-          <option value="150000">Do 150 000 km</option>
-          <option value="200000">Do 200 000 km</option>
-          <option value="250000">Do 250 000 km</option>
-          <option value="300000">Do 300 000 km</option>
-        </select>
+        <div class="bss-km-wrap">
+          <input type="text" id="bss-km-max" inputmode="numeric" placeholder="Jakýkoliv" autocomplete="off">
+          <ul class="bss-km-list" id="bss-km-list" hidden>
+          <li data-value="">Jakýkoliv</li>
+          <li data-value="25000">Do 25 000 Km</li>
+          <li data-value="50000">Do 50 000 Km</li>
+          <li data-value="100000">Do 100 000 Km</li>
+          <li data-value="150000">Do 150 000 Km</li>
+          <li data-value="200000">Do 200 000 Km</li>
+          <li data-value="250000">Do 250 000 Km</li>
+          <li data-value="300000">Do 300 000 Km</li>
+          </ul>
+        </div>
       </div>
 
       <div class="bss-field">
@@ -300,10 +305,33 @@ function initSmartSearch() {
     createLoadMoreButton();
     setupDropdowns();
     setupSliders();
+    setupKmPicker();
     restoreSavedFilters();
     setupButtons();
     setupNativeToggles();
+    markEmailButton();
     processCurrentPageAds(shouldAutoFetch);
+}
+
+// Tabulka s prodejcem nemá vlastní třídu, označíme ji, aby šla zarovnat jako zbytek detailu
+function markDetailBlocks() {
+    document.querySelectorAll("td.listadvlevo, td.listadvpravo").forEach((td) => {
+        const table = td.closest("table");
+        if (table) table.classList.add("bss-detail-table");
+    });
+}
+
+// Tlačítko "Nové inzeráty e-mailem" je mimo kontejner výpisu, takže při skrytém menu zůstane u kraje.
+// Označíme ho třídou, aby dostalo stejné boční okraje jako výpis.
+function markEmailButton() {
+    const candidates = document.querySelectorAll("button, input[type=button], input[type=submit], a");
+    for (const el of candidates) {
+        const text = el.tagName === "INPUT" ? el.value : el.textContent;
+        if (/e-?mailem/i.test(text || "")) {
+            el.classList.add("bss-email-btn");
+            return;
+        }
+    }
 }
 
 function createLoadMoreButton() {
@@ -371,6 +399,45 @@ function setTypedField(id, displayValue, typedValue) {
         el.value = displayValue;
         el.dataset.typed = "";
     }
+}
+
+// Formát tisíců s mezerou: 100000 -> "100 000"
+function formatKm(n) {
+    return n ? String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ") : "";
+}
+
+// Pole nájezdu: jen číslice (písmena se odmítnou), nabídka s předvolbami
+function setupKmPicker() {
+    const input = document.getElementById("bss-km-max");
+    const list = document.getElementById("bss-km-list");
+    if (!input || !list) return;
+
+    const open = () => { list.hidden = false; };
+    const close = () => { list.hidden = true; };
+
+    input.addEventListener("focus", open);
+    input.addEventListener("click", open);
+    input.addEventListener("input", () => {
+        input.value = input.value.replace(/\D/g, "");
+    });
+    input.addEventListener("blur", () => {
+        input.value = formatKm(parseInt(input.value.replace(/\D/g, ""), 10) || 0);
+    });
+    input.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") close();
+    });
+
+    list.querySelectorAll("li").forEach((li) => {
+        li.addEventListener("mousedown", (e) => {
+            e.preventDefault(); // fokus zůstane v poli, hodnota se zapíše níže
+            input.value = formatKm(parseInt(li.dataset.value, 10) || 0);
+            close();
+        });
+    });
+
+    document.addEventListener("mousedown", (e) => {
+        if (!e.target.closest || !e.target.closest(".bss-km-wrap")) close();
+    });
 }
 
 function setupSliders() {
@@ -576,7 +643,7 @@ function getFormFilters() {
         powerMax: parseInt(document.getElementById("bss-power-max").value, 10) || null,
         yearMin: yearMin,
         yearMax: yearMax,
-        kmMax: parseInt(document.getElementById("bss-km-max").value, 10) || null,
+        kmMax: parseInt(document.getElementById("bss-km-max").value.replace(/\D/g, ""), 10) || null,
         priceMin: priceFromTyped || sliderPriceMin > 0 ? String(priceMinNum) : "",
         priceMax: priceToTyped || sliderPriceMax < MAX_PRICE ? String(priceMaxNum) : "",
         keywordsIn: document.getElementById("bss-keywords-in").value,
@@ -613,7 +680,7 @@ function restoreSavedFilters() {
         setTypedField("bss-year-from", yMin, filters.yearMin || null);
         setTypedField("bss-year-to", yMax, filters.yearMax || null);
 
-        document.getElementById("bss-km-max").value = filters.kmMax || "";
+        document.getElementById("bss-km-max").value = formatKm(filters.kmMax);
 
         const pMin = filters.priceMin ? priceToSlider(filters.priceMin) : 0;
         const pMax = filters.priceMax ? priceToSlider(filters.priceMax) : 1000;
@@ -821,6 +888,11 @@ function analyzeAdText(text, titleText = "") {
                 }
             }
         }
+    }
+
+    // Náhradní díly a pneumatiky: palivo se neurčuje (popis často vyjmenovává kompatibilní modely, např. Tesla nebo Enyaq)
+    if (PART_TITLE_REGEX.test(cleanTitle) || SPARE_PARTS_REGEX.test(cleanText)) {
+        detectedFuels.length = 0;
     }
 
     return { powerKw, year, mileageKm, ccm, ccmInferred, detectedFuels };
