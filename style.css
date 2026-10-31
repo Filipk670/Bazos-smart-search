@@ -261,9 +261,16 @@
 /* Boční okraje obsahu pod hlavičkou – platí jen když je skryté menu nebo vyhledávání */
 body.bss-compact #bss-panel,
 body.bss-compact .listainzerat,
+body.bss-compact .inzeratydetail,
+body.bss-compact .bss-detail-badges,
+body.bss-compact .fliobal,
+body.bss-compact .popisdetail,
+body.bss-compact .kontaktniformular,
+body.bss-compact .bss-detail-table,
 body.bss-compact .inzeraty,
 body.bss-compact .strankovani,
-body.bss-compact #bss-load-more-wrap {
+body.bss-compact #bss-load-more-wrap,
+body.bss-compact .bss-email-btn {
     box-sizing: border-box;
     width: auto;
     margin-left: clamp(16px, 5vw, 96px);
@@ -339,9 +346,16 @@ body.bss-compact #bss-load-more-wrap {
 
     body.bss-compact #bss-panel,
     body.bss-compact .listainzerat,
+    body.bss-compact .inzeratydetail,
+    body.bss-compact .bss-detail-badges,
+    body.bss-compact .fliobal,
+    body.bss-compact .popisdetail,
+    body.bss-compact .kontaktniformular,
+    body.bss-compact .bss-detail-table,
     body.bss-compact .inzeraty,
     body.bss-compact .strankovani,
-    body.bss-compact #bss-load-more-wrap {
+    body.bss-compact #bss-load-more-wrap,
+    body.bss-compact .bss-email-btn {
         margin-left: 12px;
         margin-right: 12px;
     }
@@ -458,4 +472,44 @@ body.bss-compact #bss-load-more-wrap {
 
 .bss-dual-slider input[type="range"]::-webkit-slider-thumb:active {
     cursor: grabbing;
+}
+/* Pole nájezdu s vlastní nabídkou předvoleb */
+.bss-km-wrap {
+    position: relative;
+}
+.bss-km-wrap input {
+    width: 100%;
+}
+.bss-km-list {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 50;
+    margin: 0;
+    padding: 4px 0;
+    list-style: none;
+    max-height: 260px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #ff6600;
+    border-radius: 5px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+.bss-km-list[hidden] {
+    display: none;
+}
+.bss-km-list li {
+    padding: 7px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    color: #222;
+}
+.bss-km-list li:hover {
+    background: #fff4ec;
+}
+
+/* Tabulka prodejce na detailu: přes celou šířku mezi okraji */
+body.bss-compact table.bss-detail-table {
+    width: calc(100% - 2 * clamp(16px, 5vw, 96px));
 }
